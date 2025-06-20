@@ -5,13 +5,15 @@ const {
     sendAndConfirmTransaction,
     PublicKey,
 } = require('@solana/web3.js');
+const { exec } = require('child_process');
 const fs = require('fs');
 const { createAtaTx, closeAtaTx } = require('./raw-tx.js');
 const { parseTxFromJson, parsePubkey } = require('./json-tx.js');
 const { formatAmount } = require('./utils.js');
+const path = require('path');
 
-function createConnection() {
-    return new Connection('http://127.0.0.1:8899', 'confirmed');
+function createConnection(network = 'http://127.0.0.1:8899') {
+    return new Connection(network, 'confirmed');
 }
 
 async function executeJsonTransaction(instructions) {
@@ -84,6 +86,25 @@ async function getTokenBalance(address, mint) {
     console.log(`Balance of ${address} for token ${mint}: ${formatAmount(balance.value.uiAmount)} tokens`);
 }
 
+async function dumpAccount(address, toPath) {
+    const connection = createConnection('http://api.mainnet-beta.solana.com');
+    const accountInfo = await connection.getAccountInfo(new PublicKey(address));
+    if (!accountInfo) {
+        throw new Error(`Account not found: ${address}`);
+    }
+    if (accountInfo.executable) {
+        exec(`solana program dump ${address} ${path.join(toPath, `${address}.so`)}`, (error, stdout, stderr) => {
+            console.log(stdout);
+            console.error(stderr);
+        });
+    } else {
+        exec(`solana account --output json ${address} > ${path.join(toPath, `${address}.json`)}`, (error, stdout, stderr) => {
+            console.log(stdout);
+            console.error(stderr);
+        });
+    }
+}
+
 module.exports = {
     executeJsonTransaction,
     getBalance,
@@ -91,4 +112,5 @@ module.exports = {
     createAta,
     closeAta,
     getTokenBalance,
+    dumpAccount,
 };

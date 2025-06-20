@@ -26,7 +26,12 @@ soltnet stop
 
 - Execute transactions
 ```bash
-soltnet exec-tx ./transactions.json
+soltnet exec-tx ./transactions.json [<params>]
+```
+
+- Dump account from mainnet
+```bash
+soltnet dump <pubkey> [<output-path>]
 ```
 
 - Get solana balance

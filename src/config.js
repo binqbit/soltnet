@@ -12,12 +12,11 @@ const ACCOUNTS_PATH = path.resolve(CONTAINER_PATH, "accounts");
 function stopTestnetContainer(onEnd) {
     console.log('Stopping testnet container...');
     exec(`docker compose -f "${path.resolve(CONTAINER_PATH, CONFIG_DOCKERCOMPOSE)}" down`, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`exec error: ${error}`);
-            return;
-        }
         console.log(stdout);
         console.error(stderr);
+        if (error) {
+            return;
+        }
         onEnd && onEnd();
     });
 }
@@ -25,12 +24,11 @@ function stopTestnetContainer(onEnd) {
 function startTestnetContainer(onEnd) {
     console.log('Starting testnet container...');
     exec(`docker compose -f "${path.resolve(CONTAINER_PATH, CONFIG_DOCKERCOMPOSE)}" up -d --build`, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`exec error: ${error}`);
-            return;
-        }
         console.log(stdout);
         console.error(stderr);
+        if (error) {
+            return;
+        }
         onEnd && onEnd();
     });
 }
