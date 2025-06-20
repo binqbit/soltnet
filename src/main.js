@@ -19,7 +19,7 @@ switch (CMD) {
         });
         break;
     case "exec-tx":
-        const txJson = loadTxFromJson(process.argv[3]);
+        const txJson = loadTxFromJson(process.argv[3], process.argv.slice(4));
         executeJsonTransaction(txJson);
         break;
     case "balance":

@@ -65,13 +65,11 @@ async function airdropSol(address, amount) {
     }
 }
 
-async function createAta(owner, mint, signerPath) {
-    const signer = JSON.parse(fs.readFileSync(signerPath, 'utf8'));
+async function createAta(owner, mint, signer) {
     await executeJsonTransaction(parseTxFromJson(createAtaTx(owner, mint, signer)));
 }
 
-async function closeAta(owner, mint, signerPath) {
-    const signer = JSON.parse(fs.readFileSync(signerPath, 'utf8'));
+async function closeAta(owner, mint, signer) {
     await executeJsonTransaction(parseTxFromJson(closeAtaTx(owner, mint, signer)));
 }
 
