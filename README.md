@@ -34,6 +34,16 @@ soltnet exec-tx ./transactions.json [<params>]
 soltnet dump <pubkey> [<output-path>]
 ```
 
+- Dump accounts from transaction
+```bash
+soltnet dump-from-tx <tx-signature> [<output-path>]
+```
+
+- Dump accounts for transaction
+```bash
+soltnet dump-for-tx ./tx.json [<output-path>] [<params>]
+```
+
 - Get solana balance
 ```bash
 soltnet balance <pubkey>

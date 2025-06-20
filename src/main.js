@@ -1,6 +1,6 @@
 const { stopTestnetContainer, startTestnetContainer, setTestnetConfig } = require("./config.js");
 const { loadTxFromJson } = require("./json-tx.js");
-const { executeJsonTransaction, getBalance, airdropSol, createAta, closeAta, getTokenBalance, dumpAccount } = require("./tx.js");
+const { executeJsonTransaction, getBalance, airdropSol, createAta, closeAta, getTokenBalance, dumpAccount, dumpAccountsFromTx, dumpAccountsForTx } = require("./tx.js");
 
 const CMD = process.argv[2];
 
@@ -24,6 +24,12 @@ switch (CMD) {
         break;
     case "dump":
         dumpAccount(process.argv[3], process.argv[4] ?? '.');
+        break;
+    case "dump-from-tx":
+        dumpAccountsFromTx(process.argv[3], process.argv[4] ?? '.');
+        break;
+    case "dump-for-tx":
+        dumpAccountsForTx(process.argv[3], process.argv[4], process.argv.slice(5));
         break;
     case "balance":
         getBalance(process.argv[3]);
