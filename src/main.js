@@ -1,6 +1,7 @@
 const { stopTestnetContainer, startTestnetContainer, setTestnetConfig } = require("./config.js");
-const { loadTxFromJson } = require("./json-tx.js");
-const { executeJsonTransaction, getBalance, airdropSol, createAta, closeAta, getTokenBalance, dumpAccount, dumpAccountsFromTx, dumpAccountsForTx, createJsonFromTx, sendSol } = require("./tx.js");
+const { loadTxFromJson } = require("./tx-format/json-tx.js");
+const { executeJsonTransaction, getBalance, airdropSol, createAta, closeAta, getTokenBalance, sendSol } = require("./tools/tx.js");
+const { dumpAccount, dumpAccountsFromTx, dumpAccountsForTx, createJsonFromTx, setDataFormat } = require("./tools/data.js");
 
 const CMD = process.argv[2];
 
@@ -18,21 +19,10 @@ switch (CMD) {
             process.exit(0);
         });
         break;
+
     case "exec-tx":
         const txJson = loadTxFromJson(process.argv[3], process.argv.slice(4));
         executeJsonTransaction(txJson);
-        break;
-    case "dump":
-        dumpAccount(process.argv[3], process.argv[4] ?? '.');
-        break;
-    case "dump-from-tx":
-        dumpAccountsFromTx(process.argv[3], process.argv[4] ?? '.');
-        break;
-    case "dump-for-tx":
-        dumpAccountsForTx(process.argv[3], process.argv[4], process.argv.slice(5));
-        break;
-    case "parse-tx":
-        createJsonFromTx(process.argv[3], process.argv[4] ?? '.');
         break;
     case "balance":
         getBalance(process.argv[3]);
@@ -52,6 +42,23 @@ switch (CMD) {
     case "token-balance":
         getTokenBalance(process.argv[3], process.argv[4]);
         break;
+        
+    case "dump":
+        dumpAccount(process.argv[3], process.argv[4] ?? '.');
+        break;
+    case "dump-from-tx":
+        dumpAccountsFromTx(process.argv[3], process.argv[4] ?? '.');
+        break;
+    case "dump-for-tx":
+        dumpAccountsForTx(process.argv[3], process.argv[4], process.argv.slice(5));
+        break;
+    case "parse-tx":
+        createJsonFromTx(process.argv[3], process.argv[4] ?? '.');
+        break;
+    case "set-data-format":
+        setDataFormat(process.argv[3], process.argv[4], process.argv[5]);
+        break;
+        
     default:
         console.error(`Unknown command: ${CMD}`);
         process.exit(1);

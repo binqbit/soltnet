@@ -117,5 +117,5 @@ function parseTxToJson(rawTx) {
 }
 
 module.exports = {
-    parseTxToJson
+    parseTxToJson,
 };

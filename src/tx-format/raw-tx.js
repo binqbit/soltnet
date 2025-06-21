@@ -3,7 +3,7 @@ const {
     SYSTEM_PROGRAM_ID,
     TOKEN_PROGRAM_ID,
     ASSOCIATED_TOKEN_PROGRAM_ID,
-} = require('./accounts.js');
+} = require('../accounts.js');
 
 function setCuLimitTx(limit) {
     return {

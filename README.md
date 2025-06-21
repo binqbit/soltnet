@@ -49,6 +49,11 @@ soltnet dump-for-tx ./tx.json [<output-path>] [<params>]
 soltnet parse-tx <tx-signature> [<output-path>]
 ```
 
+- Set data format to tx instruction data
+```bash
+soltnet set-data-format <tx> <format> <program-id>
+```
+
 - Get solana balance
 ```bash
 soltnet balance <pubkey>

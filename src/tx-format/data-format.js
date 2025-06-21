@@ -1,15 +1,7 @@
 const {
-    Keypair,
     PublicKey,
 } = require('@solana/web3.js');
-const fs = require('fs');
-const {
-    COMPUTE_BUDGET_PROGRAM_ID,
-    SYSTEM_PROGRAM_ID,
-    TOKEN_PROGRAM_ID,
-    ASSOCIATED_TOKEN_PROGRAM_ID,
-} = require('./accounts.js');
-const { setCuLimitTx, createAtaTx } = require('./raw-tx.js');
+const { parsePubkey } = require('./pubkey.js');
 
 function getParamOrDefault(value, params) {
     for (let param_id = 0; param_id < params.length; param_id++) {
@@ -20,51 +12,7 @@ function getParamOrDefault(value, params) {
     return value;
 }
 
-function parsePubkey(pubkey, params = []) {
-    if (typeof pubkey === 'object') {
-        switch (pubkey.type) {
-            case 'ata':
-                const owner = parsePubkey(pubkey.owner, params);
-                const mint = parsePubkey(pubkey.mint, params);
-                return PublicKey.findProgramAddressSync(
-                    [
-                        owner.toBuffer(),
-                        TOKEN_PROGRAM_ID.toBuffer(),
-                        mint.toBuffer()
-                    ],
-                    ASSOCIATED_TOKEN_PROGRAM_ID
-                )[0];
-            case 'compute_budget_program':
-                return COMPUTE_BUDGET_PROGRAM_ID;
-            case 'system_program':
-                return SYSTEM_PROGRAM_ID;
-            case 'token_program':
-                return TOKEN_PROGRAM_ID;
-            case 'associated_token_program':
-                return ASSOCIATED_TOKEN_PROGRAM_ID;
-            default:
-                throw new Error(`Unsupported pubkey type: ${pubkey.type}`);
-        }
-    }
-
-    let param = getParamOrDefault(pubkey, params);
-    if (param !== pubkey) {
-        return parsePubkey(param, params);
-    }
-    
-    return new PublicKey(pubkey);
-}
-
-function parseKeypair(keypair, params = []) {
-    keypair = getParamOrDefault(keypair, params);
-    if (typeof keypair === 'string') {
-        keypair = fs.readFileSync(keypair, 'utf8');
-        keypair = JSON.parse(keypair);
-    }
-    return Keypair.fromSecretKey(Uint8Array.from(keypair));
-}
-
-function parseData(data, params = []) {
+function packData(data, params = []) {
     switch (typeof data) {
         case 'boolean':
             data = getParamOrDefault(data, params);
@@ -93,7 +41,7 @@ function parseData(data, params = []) {
             }
             if (Array.isArray(data)) {
                 for (let i = 0; i < data.length; i++) {
-                    value = parseData(data[i], params);
+                    value = getParamOrDefault(data[i], params);
                     if (typeof value === 'string') {
                         value = parseInt(value);
                     }
@@ -132,9 +80,6 @@ function parseData(data, params = []) {
                         break;
                     case 'u64':
                         data.data = getParamOrDefault(data.data, params);
-                        if (typeof data.data === 'string') {
-                            data.data = parseInt(data.data);
-                        }
                         const u64Buffer = Buffer.alloc(8);
                         u64Buffer.writeBigUInt64LE(BigInt(data.data), 0);
                         buffer = Buffer.concat([buffer, u64Buffer]);
@@ -143,14 +88,14 @@ function parseData(data, params = []) {
                         buffer = Buffer.concat([buffer, parsePubkey(data.data, params).toBuffer()]);
                         break;
                     case 'string':
-                        buffer = Buffer.concat([buffer, parseData(data.data, params)]);
+                        buffer = Buffer.concat([buffer, packData(data.data, params)]);
                         break;
                     case 'bytes':
-                        buffer = Buffer.concat([buffer, parseData(data.data, params)]);
+                        buffer = Buffer.concat([buffer, packData(data.data, params)]);
                         break;
                     case 'object':
                         for (const item of data.data) {
-                            buffer = Buffer.concat([buffer, parseData(item, params)]);
+                            buffer = Buffer.concat([buffer, packData(item, params)]);
                         }
                         break;
                 }
@@ -161,47 +106,93 @@ function parseData(data, params = []) {
     }
 }
 
-function parseIxFromJson(ix, params = []) {
-    if (ix.program_id === "set_cu_limit") {
-        return parseIxFromJson(setCuLimitTx(ix.limit), params);
+function unpackData(buffer, schema, offset = 0) {
+    if (Array.isArray(schema)) {
+        return schema.map(entry => {
+            const res = unpackData(buffer, entry, offset);
+            offset += getByteLength(res);
+            return res;
+        });
     }
 
-    if (ix.program_id === "create_ata") {
-        return parseIxFromJson(createAtaTx(ix.owner, ix.mint), params);
+    if (typeof schema !== 'object') {
+        throw new Error('Schema must be object or array');
     }
 
-    return {
-        programId: new PublicKey(ix.program_id),
-        accounts: ix.accounts ? ix.accounts.map(acc => ({
-            pubkey: parsePubkey(acc.pubkey, params),
-            isSigner: acc.is_signer,
-            isWritable: acc.is_writable,
-        })) : [],
-        data: parseData(ix.data, params),
-    };
+    switch (schema.type) {
+        case 'u8': {
+            const data = buffer.readUInt8(offset);
+            return { ...schema, data };
+        }
+        case 'u16': {
+            const data = buffer.readUInt16LE(offset);
+            return { ...schema, data };
+        }
+        case 'u32': {
+            const data = buffer.readUInt32LE(offset);
+            return { ...schema, data };
+        }
+        case 'u64': {
+            let data = buffer.readBigUInt64LE(offset);
+            if (data > Number.MAX_SAFE_INTEGER) {
+                data = data.toString();
+            } else {
+                data = Number(data);
+            }
+            return { ...schema, data };
+        }
+        case 'boolean': {
+            const data = !!buffer[offset];
+            return { ...schema, data };
+        }
+        case 'pubkey': {
+            const data = new PublicKey(buffer.slice(offset, offset + 32)).toBase58();
+            return { ...schema, data };
+        }
+        case 'bytes': {
+            const size = schema.Size;
+            if (typeof size !== 'number') throw new Error('Missing Size in bytes schema');
+            const data = buffer.slice(offset, offset + size).toString('base64');
+            return { ...schema, size, data };
+        }
+        case 'string': {
+            const len = schema.length;
+            if (typeof len !== 'number') throw new Error('Missing Length in string schema');
+            const data = buffer.slice(offset, offset + len).toString('utf8');
+            return { ...schema, length: len, data };
+        }
+        case 'object': {
+            const out = [];
+            for (const entry of schema.data) {
+                const res = unpackData(buffer, entry, offset);
+                out.push(res);
+                offset += getByteLength(res);
+            }
+            return { type: 'object', name: schema.name, data: out };
+        }
+        default:
+            throw new Error(`Unknown type: ${schema.type}`);
+    }
 }
 
-function parseTxFromJson(tx, params = []) {
-    return {
-        instructions: tx.instructions.map(ix => parseIxFromJson(ix, params)),
-        signers: tx.signers.map(signer => parseKeypair(signer, params)),
-    };
-}
-
-function loadTxFromJson(filePath, params = []) {
-    try {
-        const data = fs.readFileSync(filePath, 'utf8');
-        return parseTxFromJson(JSON.parse(data), params);
-    } catch (error) {
-        console.error(`Error reading file ${filePath}:`, error);
-        throw error;
+function getByteLength(entry) {
+    switch (entry.type) {
+        case 'u8': return 1;
+        case 'u16': return 2;
+        case 'u32': return 4;
+        case 'u64': return 8;
+        case 'boolean': return 1;
+        case 'pubkey': return 32;
+        case 'bytes': return entry.size;
+        case 'string': return entry.length;
+        case 'object':
+            return entry.data.reduce((acc, x) => acc + getByteLength(x), 0);
+        default:
+            throw new Error(`Unknown type for byte length: ${entry.type}`);
     }
 }
 
 module.exports = {
-    parsePubkey,
-    parseKeypair,
-    parseData,
-    parseTxFromJson,
-    loadTxFromJson,
+    packData,
+    unpackData,
 };

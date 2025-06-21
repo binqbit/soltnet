@@ -6,14 +6,9 @@ const {
     PublicKey,
     SystemProgram,
 } = require('@solana/web3.js');
-const { exec } = require('child_process');
-const fs = require('fs');
-const { createAtaTx, closeAtaTx } = require('./raw-tx.js');
-const { parseTxFromJson, parsePubkey, loadTxFromJson, parseKeypair } = require('./json-tx.js');
-const { parseTxToJson } = require('./parse-tx.js');
-const { formatAmount } = require('./utils.js');
-const path = require('path');
-const { SYSTEM_PROGRAM_ID } = require('./accounts.js');
+const { createAtaTx, closeAtaTx } = require('../tx-format/raw-tx.js');
+const { parseTxFromJson, parsePubkey, parseKeypair } = require('../tx-format/json-tx.js');
+const { formatAmount } = require('../utils.js');
 
 function createConnection(network = 'http://127.0.0.1:8899') {
     return new Connection(network, 'confirmed');
@@ -113,83 +108,8 @@ async function getTokenBalance(address, mint) {
     console.log(`Balance of ${address} for token ${mint}: ${formatAmount(balance.value.uiAmount)} tokens`);
 }
 
-async function dumpAccount(address, toPath) {
-    if (!fs.existsSync(toPath)) {
-        fs.mkdirSync(toPath, { recursive: true });
-    }
-
-    const connection = createConnection('http://api.mainnet-beta.solana.com');
-    const accountInfo = await connection.getAccountInfo(new PublicKey(address));
-    if (!accountInfo) {
-        throw new Error(`Account not found: ${address}`);
-    }
-    if (accountInfo.executable) {
-        console.log(`Dumping program ${address}...`);
-        exec(`solana program dump ${address} ${path.join(toPath, `${address}.so`)}`, (error, stdout, stderr) => {
-            stderr && console.error(stderr);
-        });
-    } else {
-        console.log(`Dumping account ${address}...`);
-        exec(`solana account --output json ${address} > ${path.join(toPath, `${address}.json`)}`, (error, stdout, stderr) => {
-            stderr && console.error(stderr);
-        });
-    }
-}
-
-async function dumpAccountsFromTx(signature, toPath) {
-    const connection = createConnection('http://api.mainnet-beta.solana.com');
-    const tx = await connection.getTransaction(signature, { commitment: 'confirmed' });
-    if (!tx) {
-        throw new Error(`Transaction not found: ${signature}`);
-    }
-
-    const accounts = new Set();
-    tx.transaction.message.accountKeys.forEach(account => {
-        accounts.add(account.toBase58());
-    });
-
-    for (const account of accounts) {
-        try {
-            await dumpAccount(account, toPath);
-        } catch (error) {
-            console.error(`Failed to dump account ${account}:`, error.message);
-        }
-    }
-}
-
-async function dumpAccountsForTx(path, toPath, params = []) {
-    const tx = loadTxFromJson(path, params);
-
-    const accounts = new Set();
-    tx.forEach(instruction => {
-        instruction.accounts.forEach(account => {
-            accounts.add(account.pubkey.toBase58());
-        });
-    });
-
-    for (const account of accounts) {
-        try {
-            await dumpAccount(account, toPath);
-        } catch (error) {
-            console.error(`Failed to dump account ${account}:`, error.message);
-        }
-    }
-}
-
-async function createJsonFromTx(signature, toPath) {
-    const connection = createConnection('http://api.mainnet-beta.solana.com');
-    const tx = await connection.getParsedTransaction(signature, { commitment: 'confirmed' });
-    if (!tx) {
-        throw new Error(`Transaction not found: ${signature}`);
-    }
-
-    console.log(`Parsing transaction ${signature}...`);
-    const json = JSON.stringify(parseTxToJson(tx), null, '\t');
-    fs.writeFileSync(path.join(toPath, `${signature}.json`), json);
-    console.log(`Transaction dumped to ${path.join(toPath, `${signature}.json`)}`);
-}
-
 module.exports = {
+    createConnection,
     executeJsonTransaction,
     getBalance,
     airdropSol,
@@ -197,8 +117,4 @@ module.exports = {
     createAta,
     closeAta,
     getTokenBalance,
-    dumpAccount,
-    dumpAccountsFromTx,
-    dumpAccountsForTx,
-    createJsonFromTx,
 };
