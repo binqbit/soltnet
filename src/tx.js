@@ -9,6 +9,7 @@ const { exec } = require('child_process');
 const fs = require('fs');
 const { createAtaTx, closeAtaTx } = require('./raw-tx.js');
 const { parseTxFromJson, parsePubkey, loadTxFromJson } = require('./json-tx.js');
+const { parseTxToJson } = require('./parse-tx.js');
 const { formatAmount } = require('./utils.js');
 const path = require('path');
 
@@ -16,28 +17,19 @@ function createConnection(network = 'http://127.0.0.1:8899') {
     return new Connection(network, 'confirmed');
 }
 
-async function executeJsonTransaction(instructions) {
+async function executeJsonTransaction(jsonTx) {
     const connection = createConnection();
 
     const tx = new Transaction();
-    for (const instruction of instructions) {
+    for (const instruction of jsonTx.instructions) {
         tx.add(new TransactionInstruction({
-            keys: instruction.accounts,
             programId: instruction.programId,
             data: instruction.data,
+            keys: instruction.accounts,
         }));
     }
 
-    const signers = [];
-    for (const instruction of instructions) {
-        for (const signer of instruction.signers) {
-            if (!signers.some(s => s.publicKey.equals(signer.publicKey))) {
-                signers.push(signer);
-            }
-        }
-    }
-
-    const sig = await sendAndConfirmTransaction(connection, tx, signers, {
+    const sig = await sendAndConfirmTransaction(connection, tx, jsonTx.signers, {
         skipPreflight: false,
         preflightCommitment: 'confirmed',
     });
@@ -68,11 +60,17 @@ async function airdropSol(address, amount) {
 }
 
 async function createAta(owner, mint, signer) {
-    await executeJsonTransaction(parseTxFromJson(createAtaTx(owner, mint, signer)));
+    await executeJsonTransaction(parseTxFromJson({
+        instructions: [createAtaTx(owner, mint)],
+        signers: [signer],
+    }));
 }
 
 async function closeAta(owner, mint, signer) {
-    await executeJsonTransaction(parseTxFromJson(closeAtaTx(owner, mint, signer)));
+    await executeJsonTransaction(parseTxFromJson({
+        instructions: [closeAtaTx(owner, mint)],
+        signers: [signer],
+    }));
 }
 
 async function getTokenBalance(address, mint) {
@@ -149,6 +147,19 @@ async function dumpAccountsForTx(path, toPath, params = []) {
     }
 }
 
+async function createJsonFromTx(signature, toPath) {
+    const connection = createConnection('http://api.mainnet-beta.solana.com');
+    const tx = await connection.getParsedTransaction(signature, { commitment: 'confirmed' });
+    if (!tx) {
+        throw new Error(`Transaction not found: ${signature}`);
+    }
+
+    console.log(`Parsing transaction ${signature}...`);
+    const json = JSON.stringify(parseTxToJson(tx), null, '\t');
+    fs.writeFileSync(path.join(toPath, `${signature}.json`), json);
+    console.log(`Transaction dumped to ${path.join(toPath, `${signature}.json`)}`);
+}
+
 module.exports = {
     executeJsonTransaction,
     getBalance,
@@ -159,4 +170,5 @@ module.exports = {
     dumpAccount,
     dumpAccountsFromTx,
     dumpAccountsForTx,
+    createJsonFromTx,
 };

@@ -44,6 +44,11 @@ soltnet dump-from-tx <tx-signature> [<output-path>]
 soltnet dump-for-tx ./tx.json [<output-path>] [<params>]
 ```
 
+- Parse transaction
+```bash
+soltnet parse-tx <tx-signature> [<output-path>]
+```
+
 - Get solana balance
 ```bash
 soltnet balance <pubkey>

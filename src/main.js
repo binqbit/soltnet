@@ -1,6 +1,6 @@
 const { stopTestnetContainer, startTestnetContainer, setTestnetConfig } = require("./config.js");
 const { loadTxFromJson } = require("./json-tx.js");
-const { executeJsonTransaction, getBalance, airdropSol, createAta, closeAta, getTokenBalance, dumpAccount, dumpAccountsFromTx, dumpAccountsForTx } = require("./tx.js");
+const { executeJsonTransaction, getBalance, airdropSol, createAta, closeAta, getTokenBalance, dumpAccount, dumpAccountsFromTx, dumpAccountsForTx, createJsonFromTx } = require("./tx.js");
 
 const CMD = process.argv[2];
 
@@ -31,11 +31,14 @@ switch (CMD) {
     case "dump-for-tx":
         dumpAccountsForTx(process.argv[3], process.argv[4], process.argv.slice(5));
         break;
+    case "parse-tx":
+        createJsonFromTx(process.argv[3], process.argv[4] ?? '.');
+        break;
     case "balance":
         getBalance(process.argv[3]);
         break;
     case "airdrop":
-        airdropSol(process.argv[3], parseInt((process.argv[4] ?? '1_000_000_000').replace(/_/g, '')));
+        airdropSol(process.argv[3], parseInt((process.argv[4] ?? '1').replace(/_/g, '')) * 1_000_000_000);
         break;
     case "create-ata":
         createAta(process.argv[3], process.argv[4], process.argv[5]);

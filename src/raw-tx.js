@@ -19,7 +19,7 @@ function setCuLimitTx(limit) {
     };
 }
 
-function createAtaTx(owner, mint, signer) {
+function createAtaTx(owner, mint) {
     return {
         program_id: ASSOCIATED_TOKEN_PROGRAM_ID.toBase58(),
         accounts: [
@@ -59,11 +59,10 @@ function createAtaTx(owner, mint, signer) {
             }
         ],
         data: 0,
-        signers: [signer],
     };
 }
 
-function closeAtaTx(owner, mint, signer) {
+function closeAtaTx(owner, mint) {
     return {
         program_id: TOKEN_PROGRAM_ID.toBase58(),
         accounts: [
@@ -91,7 +90,6 @@ function closeAtaTx(owner, mint, signer) {
             type: 'u8',
             data: 9,
         },
-        signers: [signer],
     };
 }
 

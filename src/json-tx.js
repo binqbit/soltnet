@@ -161,29 +161,31 @@ function parseData(data, params = []) {
     }
 }
 
-function parseTxFromJson(json, params = []) {
-    if (Array.isArray(json)) {
-        return json.map(tx => parseTxFromJson(tx, params)[0]);
+function parseIxFromJson(ix, params = []) {
+    if (ix.program_id === "set_cu_limit") {
+        return parseIxFromJson(setCuLimitTx(ix.limit), params);
     }
 
-    if (json.program_id === "set_cu_limit") {
-        return parseTxFromJson(setCuLimitTx(json.limit), params);
+    if (ix.program_id === "create_ata") {
+        return parseIxFromJson(createAtaTx(ix.owner, ix.mint), params);
     }
 
-    if (json.program_id === "create_ata") {
-        return parseTxFromJson(createAtaTx(json.owner, json.mint, json.signer), params);
-    }
-
-    return [{
-        programId: new PublicKey(json.program_id),
-        accounts: json.accounts ? json.accounts.map(acc => ({
+    return {
+        programId: new PublicKey(ix.program_id),
+        accounts: ix.accounts ? ix.accounts.map(acc => ({
             pubkey: parsePubkey(acc.pubkey, params),
             isSigner: acc.is_signer,
             isWritable: acc.is_writable,
         })) : [],
-        data: parseData(json.data, params),
-        signers: json.signers ? json.signers.map(signer => parseKeypair(signer, params)) : [],
-    }];
+        data: parseData(ix.data, params),
+    };
+}
+
+function parseTxFromJson(tx, params = []) {
+    return {
+        instructions: tx.instructions.map(ix => parseIxFromJson(ix, params)),
+        signers: tx.signers.map(signer => parseKeypair(signer, params)),
+    };
 }
 
 function loadTxFromJson(filePath, params = []) {

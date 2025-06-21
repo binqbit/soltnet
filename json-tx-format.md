@@ -7,23 +7,25 @@ This is a transaction format that describes all the necessary parameters and ins
 
 ### Transaction Format
 ```json
-[
-    {
-        "program_id": <Program ID>,
-        "data": <Transaction Data>,
-        "accounts": [
-            {
-                "pubkey": <Public Key>,
-                "is_signer": false,
-                "is_writable": false
-            }
-        ],
-        "signers": [
-            [<Secret Keypair>],
-            [...]
-        ]
-    }
-]
+{
+    "instructions": [
+        {
+            "program_id": <Program ID>,
+            "data": <Transaction Data>,
+            "accounts": [
+                {
+                    "pubkey": <Public Key>,
+                    "is_signer": false,
+                    "is_writable": false
+                }
+            ]
+        }
+    ],
+    "signers": [
+        [<Secret Keypair>],
+        [...]
+    ]
+}
 ```
 
 ### Transaction Data
@@ -113,42 +115,46 @@ Dynamic parameters can be entered in any part of the script, indicating the numb
 - Example of using dynamic parameters, creating an associated token account USDC:
 ```json
 {
-    "program_id": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
-    "data": 0,
-    "accounts": [
+    "instructions": [
         {
-            "pubkey": "$1",
-            "is_signer": true,
-            "is_writable": true
-        },
-        {
-            "pubkey": {
-                "type": "ata",
-                "owner": "$1",
-                "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-            },
-            "is_signer": false,
-            "is_writable": true
-        },
-        {
-            "pubkey": "$1",
-            "is_signer": true,
-            "is_writable": true
-        },
-        {
-            "pubkey": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-            "is_signer": false,
-            "is_writable": false
-        },
-        {
-            "pubkey": "11111111111111111111111111111111",
-            "is_signer": false,
-            "is_writable": false
-        },
-        {
-            "pubkey": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-            "is_signer": false,
-            "is_writable": false
+            "program_id": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+            "data": 0,
+            "accounts": [
+                {
+                    "pubkey": "$1",
+                    "is_signer": true,
+                    "is_writable": true
+                },
+                {
+                    "pubkey": {
+                        "type": "ata",
+                        "owner": "$1",
+                        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+                    },
+                    "is_signer": false,
+                    "is_writable": true
+                },
+                {
+                    "pubkey": "$1",
+                    "is_signer": true,
+                    "is_writable": true
+                },
+                {
+                    "pubkey": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                    "is_signer": false,
+                    "is_writable": false
+                },
+                {
+                    "pubkey": "11111111111111111111111111111111",
+                    "is_signer": false,
+                    "is_writable": false
+                },
+                {
+                    "pubkey": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+                    "is_signer": false,
+                    "is_writable": false
+                }
+            ]
         }
     ],
     "signers": [
