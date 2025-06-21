@@ -59,6 +59,11 @@ soltnet balance <pubkey>
 soltnet airdrop <pubkey> <amount>
 ```
 
+- Send solana to another account
+```bash
+soltnet send-sol <from> <to> <amount> ./signer.json
+```
+
 - Create ATA account
 ```bash
 soltnet create-ata <owner> <mint> ./signer.json

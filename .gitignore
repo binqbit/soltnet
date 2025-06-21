@@ -1,6 +1,7 @@
 /node_modules
 /solana-testnet
 /test-ledger
+/.yarn
 package-lock.json
 yarn.lock
 soltnet

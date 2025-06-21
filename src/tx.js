@@ -4,14 +4,16 @@ const {
     TransactionInstruction,
     sendAndConfirmTransaction,
     PublicKey,
+    SystemProgram,
 } = require('@solana/web3.js');
 const { exec } = require('child_process');
 const fs = require('fs');
 const { createAtaTx, closeAtaTx } = require('./raw-tx.js');
-const { parseTxFromJson, parsePubkey, loadTxFromJson } = require('./json-tx.js');
+const { parseTxFromJson, parsePubkey, loadTxFromJson, parseKeypair } = require('./json-tx.js');
 const { parseTxToJson } = require('./parse-tx.js');
 const { formatAmount } = require('./utils.js');
 const path = require('path');
+const { SYSTEM_PROGRAM_ID } = require('./accounts.js');
 
 function createConnection(network = 'http://127.0.0.1:8899') {
     return new Connection(network, 'confirmed');
@@ -57,6 +59,33 @@ async function airdropSol(address, amount) {
     } else {
         console.log(`Airdrop successful: ${formatAmount(amount)} SOL to ${address}`);
     }
+}
+
+async function sendSol(from, to, amount, signer) {
+    const connection = createConnection();
+    const tx = new Transaction().add(
+        SystemProgram.transfer({
+            fromPubkey: new PublicKey(from),
+            toPubkey: new PublicKey(to),
+            lamports: amount,
+        })
+    );
+
+    const signers = [parseKeypair(signer)];
+
+    const sig = await sendAndConfirmTransaction(connection, tx, signers, {
+        skipPreflight: false,
+        preflightCommitment: 'confirmed',
+    });
+    console.log('Transaction sent:', sig);
+
+    const parsedTx = await connection.getParsedTransaction(sig, { commitment: 'confirmed' });
+    const logs = parsedTx.meta.logMessages || [];
+    logs.forEach(log => {
+        console.log(log);
+    });
+
+    console.log(`Sent ${formatAmount(amount)} SOL from ${from} to ${to}`);
 }
 
 async function createAta(owner, mint, signer) {
@@ -164,6 +193,7 @@ module.exports = {
     executeJsonTransaction,
     getBalance,
     airdropSol,
+    sendSol,
     createAta,
     closeAta,
     getTokenBalance,
