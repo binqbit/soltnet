@@ -37,6 +37,7 @@ async function executeJsonTransaction(jsonTx) {
     logs.forEach(log => {
         console.log(log);
     });
+    console.log('Total CUs used:', parsedTx.meta.computeUnitsConsumed);
 }
 
 async function getBalance(address) {

@@ -1,3 +1,4 @@
+const { SYSTEM_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } = require('../accounts.js');
 const {
     parsePubkey,
 } = require('./json-tx.js');
@@ -27,6 +28,60 @@ function findAtaAccounts(accounts) {
     return ataAccounts;
 }
 
+function parseNativeProgram(programId, parsed) {
+    switch (programId) {
+        case SYSTEM_PROGRAM_ID.toString(): {
+            switch (parsed.type) {
+                case 'transfer': {
+                    return {
+                        data: {
+                            type: 'object',
+                            data: [
+                                {
+                                    type: 'u32',
+                                    data: 2,
+                                },
+                                {
+                                    type: 'u64',
+                                    data: parsed.info.lamports,
+                                }
+                            ]
+                        },
+                        accounts: [
+                            parsed.info.source.toString(),
+                            parsed.info.destination.toString()
+                        ]
+                    };
+                }
+                default: {
+                    return {
+                        accounts: Object.values(parsed.info)
+                            .filter(value => typeof value === 'string')
+                    };
+                }
+            }
+        }
+        case ASSOCIATED_TOKEN_PROGRAM_ID.toString(): {
+            return {
+                accounts: [
+                    parsed.info.wallet.toString(),
+                    parsed.info.account.toString(),
+                    parsed.info.source.toString(),
+                    parsed.info.mint.toString(),
+                    parsed.info.systemProgram.toString(),
+                    parsed.info.tokenProgram.toString()
+                ]
+            };
+        }
+        default: {
+            return {
+                accounts: Object.values(parsed.info)
+                    .filter(value => typeof value === 'string')
+            };
+        }
+    }
+}
+
 function parseTxToJson(rawTx) {
     const message = rawTx.transaction.message;
     const accountKeys = message.accountKeys;
@@ -54,17 +109,10 @@ function parseTxToJson(rawTx) {
                 accounts.push(account.toString());
             }
         } else if ('parsed' in ix) {
-            for (const value of Object.values(ix.parsed.info)) {
-                if (typeof value === "string") {
-                    accounts.push(value.toString());
-                } else if (typeof value === "number") {
-                    data = {
-                        type: "u64",
-                        data: value,
-                    };
-                } else {
-                    data = value;
-                }
+            const { accounts: parsedAccounts, data: parsedData } = parseNativeProgram(program_id, ix.parsed);
+            accounts.push(...parsedAccounts);
+            if (parsedData) {
+                data = parsedData;
             }
         }
 
