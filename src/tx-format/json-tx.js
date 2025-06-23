@@ -3,7 +3,7 @@ const {
     PublicKey,
 } = require('@solana/web3.js');
 const fs = require('fs');
-const { setCuLimitTx, createAtaTx } = require('./raw-tx.js');
+const { setCuLimitTx, createAtaTx, closeAtaTx, transferTx } = require('./raw-tx.js');
 const { packData } = require('./data-format.js');
 const { parsePubkey } = require('./pubkey.js');
 
@@ -26,23 +26,26 @@ function parseKeypair(keypair, params = []) {
 }
 
 function parseIxFromJson(ix, params = []) {
-    if (ix.program_id === "set_cu_limit") {
-        return parseIxFromJson(setCuLimitTx(ix.limit), params);
+    switch (ix.program_id) {
+        case 'set_cu_limit':
+            return parseIxFromJson(setCuLimitTx(ix.limit), params);
+        case 'transfer':
+            return parseIxFromJson(transferTx(ix.from, ix.to, ix.amount), params);
+        case 'create_ata':
+            return parseIxFromJson(createAtaTx(ix.owner, ix.mint), params);
+        case 'close_ata':
+            return parseIxFromJson(closeAtaTx(ix.owner, ix.mint), params);
+        default:
+            return {
+                programId: new PublicKey(ix.program_id),
+                accounts: ix.accounts ? ix.accounts.map(acc => ({
+                    pubkey: parsePubkey(acc.pubkey, params),
+                    isSigner: acc.is_signer,
+                    isWritable: acc.is_writable,
+                })) : [],
+                data: packData(ix.data, params),
+            };
     }
-
-    if (ix.program_id === "create_ata") {
-        return parseIxFromJson(createAtaTx(ix.owner, ix.mint), params);
-    }
-
-    return {
-        programId: new PublicKey(ix.program_id),
-        accounts: ix.accounts ? ix.accounts.map(acc => ({
-            pubkey: parsePubkey(acc.pubkey, params),
-            isSigner: acc.is_signer,
-            isWritable: acc.is_writable,
-        })) : [],
-        data: packData(ix.data, params),
-    };
 }
 
 function parseTxFromJson(tx, params = []) {

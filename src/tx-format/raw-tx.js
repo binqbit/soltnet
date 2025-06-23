@@ -93,8 +93,40 @@ function closeAtaTx(owner, mint) {
     };
 }
 
+function transferTx(from, to, amount) {
+    return {
+        "program_id": SYSTEM_PROGRAM_ID.toBase58(),
+        "data": {
+            "type": "object",
+            "data": [
+                {
+                    "type": "u32",
+                    "data": 2
+                },
+                {
+                    "type": "u64",
+                    "data": amount
+                }
+            ]
+        },
+        "accounts": [
+            {
+                "pubkey": from,
+                "is_signer": true,
+                "is_writable": true
+            },
+            {
+                "pubkey": to,
+                "is_signer": false,
+                "is_writable": true
+            }
+        ]
+    };
+}
+
 module.exports = {
     setCuLimitTx,
     createAtaTx,
     closeAtaTx,
+    transferTx
 };
