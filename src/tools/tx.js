@@ -5,7 +5,9 @@ const {
     sendAndConfirmTransaction,
     PublicKey,
     SystemProgram,
+    AddressLookupTableProgram,
 } = require('@solana/web3.js');
+const fs = require('fs');
 const { createAtaTx, closeAtaTx } = require('../tx-format/raw-tx.js');
 const { parseTxFromJson, parsePubkey, parseKeypair } = require('../tx-format/json-tx.js');
 const { formatAmount } = require('../utils.js');
@@ -109,6 +111,34 @@ async function getTokenBalance(address, mint) {
     console.log(`Balance of ${address} for token ${mint}: ${formatAmount(balance.value.uiAmount)} tokens`);
 }
 
+async function createLookupTable(accountsPath, signer) {
+    const connection = createConnection();
+    const accounts = JSON.parse(fs.readFileSync(accountsPath, 'utf8'));
+    const signerKeypair = parseKeypair(signer);
+    const payerPubkey = signerKeypair.publicKey;
+    const slot = (await connection.getSlot('finalized')) - 1;
+
+    let [createIx, tableAddr] = AddressLookupTableProgram.createLookupTable({
+        authority: payerPubkey,
+        payer: payerPubkey,
+        recentSlot: slot,
+    });
+
+    const extendIx = AddressLookupTableProgram.extendLookupTable({
+        authority: payerPubkey,
+        payer: payerPubkey,
+        lookupTable: tableAddr,
+        addresses: accounts.map(acc => new PublicKey(acc)),
+    });
+
+    await executeJsonTransaction({
+        instructions: [createIx, extendIx],
+        signers: [signerKeypair],
+    });
+
+    console.log(`Lookup table created at ${tableAddr.toBase58()} with ${accounts.length} accounts`);
+}
+
 module.exports = {
     createConnection,
     executeJsonTransaction,
@@ -118,4 +148,5 @@ module.exports = {
     createAta,
     closeAta,
     getTokenBalance,
+    createLookupTable,
 };

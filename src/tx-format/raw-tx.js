@@ -128,5 +128,5 @@ module.exports = {
     setCuLimitTx,
     createAtaTx,
     closeAtaTx,
-    transferTx
+    transferTx,
 };

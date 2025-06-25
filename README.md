@@ -84,6 +84,11 @@ soltnet close-ata <owner> <mint> ./signer.json
 soltnet token-balance <owner> <mint>
 ```
 
+- Create lookup table
+```bash
+soltnet create-lookup-table <lookup-table-path> <signer>
+```
+
 ## How it works?
 The tool uses the `solana-test-validator` to start a local testnet. It reads the accounts from the specified path and uses them to initialize the testnet.
 

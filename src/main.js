@@ -1,6 +1,6 @@
 const { stopTestnetContainer, startTestnetContainer, setTestnetConfig } = require("./config.js");
 const { loadTxFromJson } = require("./tx-format/json-tx.js");
-const { executeJsonTransaction, getBalance, airdropSol, createAta, closeAta, getTokenBalance, sendSol } = require("./tools/tx.js");
+const { executeJsonTransaction, getBalance, airdropSol, createAta, closeAta, getTokenBalance, sendSol, createLookupTable } = require("./tools/tx.js");
 const { dumpAccount, dumpAccountsFromTx, dumpAccountsForTx, createJsonFromTx, setDataFormat } = require("./tools/data.js");
 
 const CMD = process.argv[2];
@@ -41,6 +41,9 @@ switch (CMD) {
         break;
     case "token-balance":
         getTokenBalance(process.argv[3], process.argv[4]);
+        break;
+    case "create-lookup-table":
+        createLookupTable(process.argv[3], process.argv[4]);
         break;
         
     case "dump":

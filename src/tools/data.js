@@ -7,7 +7,6 @@ const { unpackData, packData } = require("../tx-format/data-format.js");
 const { loadTxFromJson } = require("../tx-format/json-tx.js");
 const { parseTxToJson } = require("../tx-format/parse-tx.js");
 
-
 async function dumpAccount(address, toPath) {
     if (!fs.existsSync(toPath)) {
         fs.mkdirSync(toPath, { recursive: true });
