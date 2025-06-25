@@ -13,12 +13,14 @@ function addUnderscores(str) {
 }
 
 function formatAmount(num) {
+    const prefix = num < 0 ? '-' : '';
+    num = Math.abs(num).toString();
     num = removeUnderscores(num);
     if (num.includes('.')) {
         const [integerPart, fractionalPart] = num.split('.');
-        return addUnderscores(integerPart) + '.' + addUnderscores(fractionalPart);
+        return prefix + addUnderscores(integerPart) + '.' + addUnderscores(fractionalPart);
     } else {
-        return addUnderscores(num);
+        return prefix + addUnderscores(num);
     }
 }
 
