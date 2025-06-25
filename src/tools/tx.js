@@ -1,7 +1,9 @@
 const {
     Connection,
     Transaction,
+    TransactionMessage,
     TransactionInstruction,
+    VersionedTransaction,
     sendAndConfirmTransaction,
     PublicKey,
     SystemProgram,
@@ -16,30 +18,70 @@ function createConnection(network = 'http://127.0.0.1:8899') {
     return new Connection(network, 'confirmed');
 }
 
-async function executeJsonTransaction(jsonTx) {
+async function executeJsonTransaction(jsonTx, payerPubkey) {
     const connection = createConnection();
+    const payer = payerPubkey ? new PublicKey(payerPubkey) : jsonTx.signers[0].publicKey;
 
-    const tx = new Transaction();
-    for (const instruction of jsonTx.instructions) {
-        tx.add(new TransactionInstruction({
-            programId: instruction.programId,
-            data: instruction.data,
-            keys: instruction.accounts,
-        }));
+    let altAccounts = [];
+    if (jsonTx.lookupTables?.length) {
+        altAccounts = await Promise.all(
+            jsonTx.lookupTables.map(async (key) => {
+                const { value } = await connection.getAddressLookupTable(
+                    new PublicKey(key),
+                );
+                if (!value) throw new Error(`ALT ${key} not found / not active`);
+                return value;
+            }),
+        );
     }
 
-    const sig = await sendAndConfirmTransaction(connection, tx, jsonTx.signers, {
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+
+    const instructions = jsonTx.instructions.map((ix) =>
+        ix instanceof TransactionInstruction ? ix : new TransactionInstruction(ix),
+    );
+
+    const message =
+        altAccounts.length === 0
+            ? new TransactionMessage({
+                payerKey: payer,
+                recentBlockhash: blockhash,
+                instructions,
+            }).compileToLegacyMessage()
+            : new TransactionMessage({
+                payerKey: payer,
+                recentBlockhash: blockhash,
+                instructions,
+            }).compileToV0Message(altAccounts);
+
+    const vtx = new VersionedTransaction(message);
+    vtx.sign(jsonTx.signers);
+
+    const balanceBefore = await connection.getBalance(payer);
+
+    const sig = await connection.sendTransaction(vtx, {
         skipPreflight: false,
         preflightCommitment: 'confirmed',
     });
+    await connection.confirmTransaction(
+        { signature: sig, blockhash, lastValidBlockHeight },
+        'confirmed',
+    );
     console.log('Transaction sent:', sig);
 
-    const parsedTx = await connection.getParsedTransaction(sig, { commitment: 'confirmed' });
-    const logs = parsedTx.meta.logMessages || [];
-    logs.forEach(log => {
+    const parsedTx = await connection.getParsedTransaction(sig, {
+        commitment: 'confirmed',
+        maxSupportedTransactionVersion: 0,
+    });
+    parsedTx.meta?.logMessages?.forEach(log => {
         console.log(log);
     });
-    console.log('Total CUs used:', parsedTx.meta.computeUnitsConsumed);
+
+    const balanceAfter = await connection.getBalance(payer);
+    const amountChanged = balanceAfter - balanceBefore;
+
+    console.log('Total CUs used:', parsedTx.meta?.computeUnitsConsumed ?? 'n/a');
+    console.log(`Balance changed: ${formatAmount(amountChanged)} lamports`);
 }
 
 async function getBalance(address) {

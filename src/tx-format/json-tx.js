@@ -38,7 +38,7 @@ function parseIxFromJson(ix, params = []) {
         default:
             return {
                 programId: new PublicKey(ix.program_id),
-                accounts: ix.accounts ? ix.accounts.map(acc => ({
+                keys: ix.accounts ? ix.accounts.map(acc => ({
                     pubkey: parsePubkey(acc.pubkey, params),
                     isSigner: acc.is_signer,
                     isWritable: acc.is_writable,
@@ -52,6 +52,7 @@ function parseTxFromJson(tx, params = []) {
     return {
         instructions: tx.instructions.map(ix => parseIxFromJson(ix, params)),
         signers: tx.signers.map(signer => parseKeypair(signer, params)),
+        lookupTables: tx.lookup_tables?.map(alt => parsePubkey(alt, params)),
     };
 }
 
