@@ -8,6 +8,7 @@ const CONFIG_DOCKERCOMPOSE = "docker-compose.yml";
 
 const CONTAINER_PATH = path.resolve(process.argv[0], "..", "solana-testnet");
 const ACCOUNTS_PATH = path.resolve(CONTAINER_PATH, "accounts");
+const TEST_LEDGER_PATH = path.resolve(CONTAINER_PATH, "test-ledger");
 
 function stopTestnetContainer(onEnd) {
     console.log('Stopping testnet container...');
@@ -17,6 +18,7 @@ function stopTestnetContainer(onEnd) {
         if (error) {
             return;
         }
+        fs.rmSync(TEST_LEDGER_PATH, { recursive: true, force: true });
         onEnd && onEnd();
     });
 }
