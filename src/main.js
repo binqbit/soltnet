@@ -9,6 +9,9 @@ switch (CMD) {
     case "load":
         setTestnetConfig(process.argv[3]);
         break;
+    case "clear":
+        setTestnetConfig();
+        break;
     case "start":
         startTestnetContainer(() => {
             process.exit(0);

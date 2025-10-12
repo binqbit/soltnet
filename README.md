@@ -14,6 +14,11 @@ yarn build
 soltnet load ./testnet-accounts
 ```
 
+- Clear testnet accounts
+```bash
+soltnet clear
+```
+
 - Start testnet
 ```bash
 soltnet start

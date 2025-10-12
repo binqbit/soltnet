@@ -49,7 +49,7 @@ function setTestnetConfig(accounts_path) {
         fs.mkdirSync(ACCOUNTS_PATH, { recursive: true });
     }
 
-    const all_accounts = fs.readdirSync(accounts_path);
+    const all_accounts = accounts_path ? fs.readdirSync(accounts_path) : [];
     let programs = all_accounts
         .filter(file => file.endsWith('.so'))
         .map(file => file.slice(file.lastIndexOf('/') + 1, file.lastIndexOf('.')));
