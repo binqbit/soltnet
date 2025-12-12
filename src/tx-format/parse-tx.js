@@ -29,6 +29,10 @@ function findAtaAccounts(accounts) {
 }
 
 function parseNativeProgram(programId, parsed) {
+    if (!parsed) {
+        return { accounts: [], data: undefined };
+    }
+
     switch (programId) {
         case SYSTEM_PROGRAM_ID.toString(): {
             switch (parsed.type) {
@@ -74,9 +78,17 @@ function parseNativeProgram(programId, parsed) {
             };
         }
         default: {
+            const info = parsed.info;
+            const accounts =
+                info && typeof info === 'object' && !Array.isArray(info)
+                    ? Object.values(info).filter(value => typeof value === 'string')
+                    : [];
+            const data =
+                typeof info === 'string' || typeof info === 'number' ? info : undefined;
+
             return {
-                accounts: Object.values(parsed.info)
-                    .filter(value => typeof value === 'string')
+                accounts,
+                data,
             };
         }
     }
@@ -109,7 +121,7 @@ function parseTxToJson(rawTx) {
                 accounts.push(account.toString());
             }
         } else if ('parsed' in ix) {
-            const { accounts: parsedAccounts, data: parsedData } = parseNativeProgram(program_id, ix.parsed);
+            const { accounts: parsedAccounts = [], data: parsedData } = parseNativeProgram(program_id, ix.parsed);
             accounts.push(...parsedAccounts);
             if (parsedData) {
                 data = parsedData;

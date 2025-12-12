@@ -76,6 +76,11 @@ soltnet dump-for-tx ./tx.json [<output-path>] [<params>]
 soltnet parse-tx <tx-signature> [<output-path>]
 ```
 
+- Parse block by slot (parsed transactions + raw block)
+```bash
+soltnet parse-block <slot> [<output-path>]
+```
+
 - Dump raw transaction response (base64 JSON from RPC)
 ```bash
 soltnet dump-raw-tx <tx-signature> [<output-path>]

@@ -141,6 +141,53 @@ async function createJsonFromTx(signature, toPath) {
     console.log(`Transaction dumped to ${path.join(toPath, `${signature}.json`)}`);
 }
 
+async function parseBlock(slot, toPath = '.') {
+    const connection = createConnection('http://api.mainnet-beta.solana.com');
+    const blockNumber = Number(slot);
+    if (Number.isNaN(blockNumber)) {
+        throw new Error(`Invalid slot: ${slot}`);
+    }
+
+    const block = await connection.getParsedBlock(blockNumber, {
+        commitment: 'confirmed',
+        maxSupportedTransactionVersion: 0,
+    });
+    if (!block) {
+        throw new Error(`Block not found: ${slot}`);
+    }
+
+    const parsedTxs = block.transactions.map((tx, index) => {
+        const accounts = tx.transaction.message.accountKeys.map((k) => ({
+            pubkey: k.pubkey.toString(),
+            is_signer: k.signer,
+            is_writable: k.writable,
+        }));
+        return {
+            index,
+            signatures: tx.transaction.signatures.map(String),
+            accounts,
+            tx: parseTxToJson(tx),
+            meta: tx.meta ?? null,
+        };
+    });
+
+    if (!fs.existsSync(toPath)) {
+        fs.mkdirSync(toPath, { recursive: true });
+    }
+
+    const filePath = path.join(toPath, `${blockNumber}.json`);
+    const payload = {
+        slot: block.slot ?? blockNumber,
+        blockHeight: block.blockHeight ?? null,
+        blockTime: block.blockTime ?? null,
+        parentSlot: block.parentSlot,
+        transactions: parsedTxs,
+        raw: block,
+    };
+    fs.writeFileSync(filePath, JSON.stringify(payload, null, '\t'));
+    console.log(`Parsed block saved to ${filePath}`);
+}
+
 function setDataFormat(txPath, formatPath, programId) {
     const tx = loadTxFromJson(txPath, [], false);
     const dataFormat = JSON.parse(fs.readFileSync(formatPath, 'utf8'));
@@ -165,5 +212,6 @@ module.exports = {
     dumpRawTransaction,
     dumpRawBlock,
     createJsonFromTx,
+    parseBlock,
     setDataFormat,
 };

@@ -22,6 +22,7 @@ const {
     dumpRawTransaction,
     dumpRawBlock,
     createJsonFromTx,
+    parseBlock,
     setDataFormat,
 } = require("./tools/data.js");
 
@@ -187,6 +188,16 @@ const commands = new Map([
                 throw new CLIError("Missing <signature> for command \"parse-tx\".");
             }
             return createJsonFromTx(signature, outputPath ?? ".");
+        },
+    }],
+    ["parse-block", {
+        summary: "Parse a block by slot and store parsed transactions",
+        usage: `${binaryName} parse-block <slot> [<output-path>]`,
+        run: ([slot, outputPath]) => {
+            if (!slot) {
+                throw new CLIError("Missing <slot> for command \"parse-block\".");
+            }
+            return parseBlock(slot, outputPath ?? ".");
         },
     }],
     ["dump-raw-tx", {
