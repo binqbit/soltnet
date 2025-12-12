@@ -1,6 +1,7 @@
 const path = require('path');
 const { exec } = require('child_process');
 const fs = require('fs');
+const { PublicKey } = require("@solana/web3.js");
 
 const { createConnection } = require("./tx.js");
 const { unpackData, packData } = require("../tx-format/data-format.js");

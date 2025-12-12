@@ -3,7 +3,9 @@
   "name": "soltnet",
   "version": "1.0.0",
   "description": "Solana Testnet Tool",
-  "bin": "./src/main.js",
+  "bin": {
+    "soltnet": "./src/main.js"
+  },
   "scripts": {
     "start": "node ./src/main.js",
     "build": "pkg . --targets node18-win-x64 --output soltnet"

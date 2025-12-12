@@ -4,6 +4,28 @@
 This tool facilitates the development and testing process of various programs on Solana. Especially if it is necessary to dump the account of the program and quickly test transactions or something like that.
 
 ## Usage
+- Show available commands
+```bash
+soltnet --help
+```
+
+## Install globally for CLI use (Yarn)
+From the repo:
+```bash
+yarn install
+yarn link       # registers "soltnet" globally
+```
+From any project or shell:
+```bash
+yarn link soltnet
+soltnet --help
+```
+
+- Get command-specific help
+```bash
+soltnet help <command>
+```
+
 - Build the soltnet binary
 ```bash
 yarn build
