@@ -81,6 +81,11 @@ soltnet parse-tx <tx-signature> [<output-path>]
 soltnet dump-raw-tx <tx-signature> [<output-path>]
 ```
 
+- Dump raw block response (base64 JSON from RPC)
+```bash
+soltnet dump-raw-block <slot> [<output-path>]
+```
+
 - Set data format to tx instruction data
 ```bash
 soltnet set-data-format <tx> <format> <program-id>

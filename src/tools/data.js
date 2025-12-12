@@ -97,6 +97,37 @@ async function dumpRawTransaction(signature, toPath = '.') {
     console.log(`Raw transaction dumped to ${filePath}`);
 }
 
+async function dumpRawBlock(slot, toPath = '.') {
+    const connection = createConnection('http://api.mainnet-beta.solana.com');
+    const blockNumber = Number(slot);
+    if (Number.isNaN(blockNumber)) {
+        throw new Error(`Invalid slot: ${slot}`);
+    }
+
+    const { result, error } = await connection._rpcRequest('getBlock', [
+        blockNumber,
+        {
+            commitment: 'confirmed',
+            encoding: 'base64',
+            maxSupportedTransactionVersion: 0,
+        },
+    ]);
+    if (error) {
+        throw new Error(`RPC error: ${error.message ?? JSON.stringify(error)}`);
+    }
+    if (!result) {
+        throw new Error(`Block not found: ${slot}`);
+    }
+
+    if (!fs.existsSync(toPath)) {
+        fs.mkdirSync(toPath, { recursive: true });
+    }
+
+    const filePath = path.join(toPath, `${blockNumber}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(result, null, '\t'));
+    console.log(`Raw block dumped to ${filePath}`);
+}
+
 async function createJsonFromTx(signature, toPath) {
     const connection = createConnection('http://api.mainnet-beta.solana.com');
     const tx = await connection.getParsedTransaction(signature, { commitment: 'confirmed' });
@@ -132,6 +163,7 @@ module.exports = {
     dumpAccountsFromTx,
     dumpAccountsForTx,
     dumpRawTransaction,
+    dumpRawBlock,
     createJsonFromTx,
     setDataFormat,
 };
