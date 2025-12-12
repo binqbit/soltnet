@@ -76,6 +76,11 @@ soltnet dump-for-tx ./tx.json [<output-path>] [<params>]
 soltnet parse-tx <tx-signature> [<output-path>]
 ```
 
+- Dump raw transaction response (base64 JSON from RPC)
+```bash
+soltnet dump-raw-tx <tx-signature> [<output-path>]
+```
+
 - Set data format to tx instruction data
 ```bash
 soltnet set-data-format <tx> <format> <program-id>

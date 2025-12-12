@@ -71,6 +71,32 @@ async function dumpAccountsForTx(path, toPath, params = []) {
     }
 }
 
+async function dumpRawTransaction(signature, toPath = '.') {
+    const connection = createConnection('http://api.mainnet-beta.solana.com');
+    const { result, error } = await connection._rpcRequest('getTransaction', [
+        signature,
+        {
+            commitment: 'confirmed',
+            encoding: 'base64',
+            maxSupportedTransactionVersion: 0,
+        },
+    ]);
+    if (error) {
+        throw new Error(`RPC error: ${error.message ?? JSON.stringify(error)}`);
+    }
+    if (!result) {
+        throw new Error(`Transaction not found: ${signature}`);
+    }
+
+    if (!fs.existsSync(toPath)) {
+        fs.mkdirSync(toPath, { recursive: true });
+    }
+
+    const filePath = path.join(toPath, `${signature}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(result, null, '\t'));
+    console.log(`Raw transaction dumped to ${filePath}`);
+}
+
 async function createJsonFromTx(signature, toPath) {
     const connection = createConnection('http://api.mainnet-beta.solana.com');
     const tx = await connection.getParsedTransaction(signature, { commitment: 'confirmed' });
@@ -105,6 +131,7 @@ module.exports = {
     dumpAccount,
     dumpAccountsFromTx,
     dumpAccountsForTx,
+    dumpRawTransaction,
     createJsonFromTx,
     setDataFormat,
 };

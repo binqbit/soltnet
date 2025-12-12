@@ -19,6 +19,7 @@ const {
     dumpAccount,
     dumpAccountsFromTx,
     dumpAccountsForTx,
+    dumpRawTransaction,
     createJsonFromTx,
     setDataFormat,
 } = require("./tools/data.js");
@@ -185,6 +186,16 @@ const commands = new Map([
                 throw new CLIError("Missing <signature> for command \"parse-tx\".");
             }
             return createJsonFromTx(signature, outputPath ?? ".");
+        },
+    }],
+    ["dump-raw-tx", {
+        summary: "Fetch a raw transaction response and store it as JSON",
+        usage: `${binaryName} dump-raw-tx <signature> [<output-path>]`,
+        run: ([signature, outputPath]) => {
+            if (!signature) {
+                throw new CLIError("Missing <signature> for command \"dump-raw-tx\".");
+            }
+            return dumpRawTransaction(signature, outputPath ?? ".");
         },
     }],
     ["set-data-format", {
