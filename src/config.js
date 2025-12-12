@@ -1,21 +1,25 @@
 const fs = require("fs");
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 const path = require("path");
 
 const CONFIG_DEPLOY = "deploy.sh";
 const CONFIG_DOCKERFILE = "Dockerfile.testnet";
 const CONFIG_DOCKERCOMPOSE = "docker-compose.yml";
 
-const CONTAINER_PATH = path.resolve(process.argv[0], "..", "solana-testnet");
-const ACCOUNTS_PATH = path.resolve(CONTAINER_PATH, "accounts");
-const TEST_LEDGER_PATH = path.resolve(CONTAINER_PATH, "test-ledger");
+const REPO_ROOT = path.resolve(__dirname, "..");
+const CONTAINER_PATH = path.join(REPO_ROOT, "solana-testnet");
+const ACCOUNTS_PATH = path.join(CONTAINER_PATH, "accounts");
+const TEST_LEDGER_PATH = path.join(CONTAINER_PATH, "test-ledger");
 
 function stopTestnetContainer(onEnd) {
     console.log('Stopping testnet container...');
-    exec(`docker compose -f "${path.resolve(CONTAINER_PATH, CONFIG_DOCKERCOMPOSE)}" down`, (error, stdout, stderr) => {
-        stdout && console.log(stdout);
-        stderr && console.error(stderr);
-        if (error) {
+    const composePath = path.resolve(CONTAINER_PATH, CONFIG_DOCKERCOMPOSE);
+    const child = spawn('docker', ['compose', '-f', composePath, 'down'], {
+        stdio: 'inherit',
+    });
+    child.on('close', (code) => {
+        if (code !== 0) {
+            console.error(`docker compose down exited with code ${code}`);
             return;
         }
         fs.rmSync(TEST_LEDGER_PATH, { recursive: true, force: true });
@@ -25,11 +29,13 @@ function stopTestnetContainer(onEnd) {
 
 function startTestnetContainer(onEnd) {
     console.log('Starting testnet container...');
-    exec(`docker compose -f "${path.resolve(CONTAINER_PATH, CONFIG_DOCKERCOMPOSE)}" up -d --build`, (error, stdout, stderr) => {
-        stdout && console.log(stdout);
-        stderr && console.error(stderr);
-        if (error) {
-            return;
+    const composePath = path.resolve(CONTAINER_PATH, CONFIG_DOCKERCOMPOSE);
+    const child = spawn('docker', ['compose', '-f', composePath, 'up', '--build'], {
+        stdio: 'inherit',
+    });
+    child.on('close', (code) => {
+        if (code !== 0) {
+            console.error(`docker compose exited with code ${code}`);
         }
         onEnd && onEnd();
     });
