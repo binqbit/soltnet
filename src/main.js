@@ -191,7 +191,7 @@ const commands = new Map([
         },
     }],
     ["parse-block", {
-        summary: "Parse a block by slot and store parsed transactions",
+        summary: "Parse/analyze a block by slot (accounts, balances, instructions)",
         usage: `${binaryName} parse-block <slot> [<output-path>]`,
         run: ([slot, outputPath]) => {
             if (!slot) {

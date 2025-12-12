@@ -76,7 +76,7 @@ soltnet dump-for-tx ./tx.json [<output-path>] [<params>]
 soltnet parse-tx <tx-signature> [<output-path>]
 ```
 
-- Parse block by slot (parsed transactions + raw block)
+- Parse block by slot (analysis-friendly accounts/instructions/meta -> `<slot>.json`)
 ```bash
 soltnet parse-block <slot> [<output-path>]
 ```

@@ -178,4 +178,5 @@ function parseTxToJson(rawTx) {
 
 module.exports = {
     parseTxToJson,
+    parseNativeProgram,
 };

@@ -6,7 +6,7 @@ const { PublicKey } = require("@solana/web3.js");
 const { createConnection } = require("./tx.js");
 const { unpackData, packData } = require("../tx-format/data-format.js");
 const { loadTxFromJson } = require("../tx-format/json-tx.js");
-const { parseTxToJson } = require("../tx-format/parse-tx.js");
+const { parseTxToJson, parseNativeProgram } = require("../tx-format/parse-tx.js");
 
 async function dumpAccount(address, toPath) {
     if (!fs.existsSync(toPath)) {
@@ -156,18 +156,95 @@ async function parseBlock(slot, toPath = '.') {
         throw new Error(`Block not found: ${slot}`);
     }
 
-    const parsedTxs = block.transactions.map((tx, index) => {
-        const accounts = tx.transaction.message.accountKeys.map((k) => ({
+    const parsedTxs = block.transactions.map((tx) => {
+        const accountKeys = tx.transaction.message.accountKeys;
+        const meta = tx.meta ?? {};
+
+        const accountMetaByIndex = accountKeys.map((k, idx) => ({
             pubkey: k.pubkey.toString(),
-            is_signer: k.signer,
-            is_writable: k.writable,
+            isSigner: k.signer,
+            isWritable: k.writable,
+            preBalance: meta.preBalances?.[idx] ?? null,
+            postBalance: meta.postBalances?.[idx] ?? null,
         }));
+
+        const normalizeIxAccounts = (ixAccounts = []) => ixAccounts.map((acc) => {
+            const pubkey = typeof acc === 'number'
+                ? accountKeys[acc]?.pubkey.toString()
+                : acc?.toString();
+            const metaEntry = pubkey ? accountMetaByIndex.find(a => a.pubkey === pubkey) : undefined;
+            return {
+                pubkey: pubkey ?? null,
+                isSigner: metaEntry?.isSigner ?? false,
+                isWritable: metaEntry?.isWritable ?? false,
+            };
+        });
+
+        const findAccountName = (pubkey, parsedInfo) => {
+            if (!parsedInfo || typeof parsedInfo !== 'object') return null;
+            for (const [key, value] of Object.entries(parsedInfo)) {
+                if (typeof value === 'string' && value === pubkey) return key;
+                if (Array.isArray(value) && value.includes(pubkey)) return key;
+                if (value && typeof value === 'object') {
+                    if (typeof value.pubkey === 'string' && value.pubkey === pubkey) return key;
+                    if (typeof value.wallet === 'string' && value.wallet === pubkey) return key;
+                    if (typeof value.owner === 'string' && value.owner === pubkey) return key;
+                }
+            }
+            return null;
+        };
+
+        const instructions = tx.transaction.message.instructions.map((ix, ixIndex) => {
+            const accounts = normalizeIxAccounts(ix.accounts).map((acc) => {
+                const name = findAccountName(acc.pubkey, ix.parsed?.info);
+                const entry = { ...acc };
+                if (name != null) {
+                    entry.name = name;
+                }
+                return entry;
+            });
+
+            const programId = ix.programId.toString();
+            const nativeParsed = ix.parsed ? parseNativeProgram(programId, ix.parsed) : null;
+            let data = nativeParsed?.data
+                ?? (ix.parsed?.info ?? ix.parsed ?? ix.data ?? null);
+
+            if (typeof data === "string") {
+                let buf = null;
+                try {
+                    buf = Buffer.from(data, "base64");
+                } catch (_) { /* ignore */ }
+                if (!buf || buf.length === 0) {
+                    try {
+                        buf = Buffer.from(require("bs58").decode(data));
+                    } catch (_) { /* ignore */ }
+                }
+                if (buf && buf.length > 0) {
+                    data = `0x${buf.toString("hex")}`;
+                }
+            }
+
+            return {
+                program: ix.programId.toString(),
+                data,
+                accounts,
+            };
+        });
+
         return {
-            index,
-            signatures: tx.transaction.signatures.map(String),
-            accounts,
-            tx: parseTxToJson(tx),
-            meta: tx.meta ?? null,
+            signature: tx.transaction.signatures[0]?.toString() ?? null,
+            ixs: instructions,
+            meta: {
+                logs: meta.logMessages ?? [],
+                accounts: accountMetaByIndex.map(({ pubkey, preBalance, postBalance }) => ({
+                    pubkey,
+                    preBalance,
+                    postBalance,
+                    balanceChange: (postBalance != null && preBalance != null)
+                        ? postBalance - preBalance
+                        : 0,
+                })),
+            },
         };
     });
 
@@ -177,12 +254,8 @@ async function parseBlock(slot, toPath = '.') {
 
     const filePath = path.join(toPath, `${blockNumber}.json`);
     const payload = {
-        slot: block.slot ?? blockNumber,
-        blockHeight: block.blockHeight ?? null,
-        blockTime: block.blockTime ?? null,
-        parentSlot: block.parentSlot,
-        transactions: parsedTxs,
-        raw: block,
+        slot: blockNumber.toString(),
+        txs: parsedTxs,
     };
     fs.writeFileSync(filePath, JSON.stringify(payload, null, '\t'));
     console.log(`Parsed block saved to ${filePath}`);
