@@ -200,22 +200,22 @@ const commands = new Map([
             return parseBlock(slot, outputPath ?? ".");
         },
     }],
-    ["dump-raw-tx", {
+    ["dump-tx", {
         summary: "Fetch a raw transaction response and store it as JSON",
-        usage: `${binaryName} dump-raw-tx <signature> [<output-path>]`,
+        usage: `${binaryName} dump-tx <signature> [<output-path>]`,
         run: ([signature, outputPath]) => {
             if (!signature) {
-                throw new CLIError("Missing <signature> for command \"dump-raw-tx\".");
+                throw new CLIError("Missing <signature> for command \"dump-tx\".");
             }
             return dumpRawTransaction(signature, outputPath ?? ".");
         },
     }],
-    ["dump-raw-block", {
+    ["dump-block", {
         summary: "Fetch a raw block response and store it as JSON",
-        usage: `${binaryName} dump-raw-block <slot> [<output-path>]`,
+        usage: `${binaryName} dump-block <slot> [<output-path>]`,
         run: ([slot, outputPath]) => {
             if (!slot) {
-                throw new CLIError("Missing <slot> for command \"dump-raw-block\".");
+                throw new CLIError("Missing <slot> for command \"dump-block\".");
             }
             return dumpRawBlock(slot, outputPath ?? ".");
         },

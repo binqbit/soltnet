@@ -83,12 +83,12 @@ soltnet parse-block <slot> [<output-path>]
 
 - Dump raw transaction response (base64 JSON from RPC)
 ```bash
-soltnet dump-raw-tx <tx-signature> [<output-path>]
+soltnet dump-tx <tx-signature> [<output-path>]
 ```
 
 - Dump raw block response (base64 JSON from RPC)
 ```bash
-soltnet dump-raw-block <slot> [<output-path>]
+soltnet dump-block <slot> [<output-path>]
 ```
 
 - Set data format to tx instruction data

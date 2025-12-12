@@ -73,18 +73,8 @@ async function dumpAccountsForTx(path, toPath, params = []) {
 
 async function dumpRawTransaction(signature, toPath = '.') {
     const connection = createConnection('http://api.mainnet-beta.solana.com');
-    const { result, error } = await connection._rpcRequest('getTransaction', [
-        signature,
-        {
-            commitment: 'confirmed',
-            encoding: 'base64',
-            maxSupportedTransactionVersion: 0,
-        },
-    ]);
-    if (error) {
-        throw new Error(`RPC error: ${error.message ?? JSON.stringify(error)}`);
-    }
-    if (!result) {
+    const tx = await connection.getParsedTransaction(signature, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 });
+    if (!tx) {
         throw new Error(`Transaction not found: ${signature}`);
     }
 
@@ -93,7 +83,7 @@ async function dumpRawTransaction(signature, toPath = '.') {
     }
 
     const filePath = path.join(toPath, `${signature}.json`);
-    fs.writeFileSync(filePath, JSON.stringify(result, null, '\t'));
+    fs.writeFileSync(filePath, JSON.stringify(tx, null, '\t'));
     console.log(`Raw transaction dumped to ${filePath}`);
 }
 
@@ -104,18 +94,8 @@ async function dumpRawBlock(slot, toPath = '.') {
         throw new Error(`Invalid slot: ${slot}`);
     }
 
-    const { result, error } = await connection._rpcRequest('getBlock', [
-        blockNumber,
-        {
-            commitment: 'confirmed',
-            encoding: 'base64',
-            maxSupportedTransactionVersion: 0,
-        },
-    ]);
-    if (error) {
-        throw new Error(`RPC error: ${error.message ?? JSON.stringify(error)}`);
-    }
-    if (!result) {
+    const block = await connection.getParsedBlock(blockNumber, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 });
+    if (!block) {
         throw new Error(`Block not found: ${slot}`);
     }
 
@@ -124,7 +104,7 @@ async function dumpRawBlock(slot, toPath = '.') {
     }
 
     const filePath = path.join(toPath, `${blockNumber}.json`);
-    fs.writeFileSync(filePath, JSON.stringify(result, null, '\t'));
+    fs.writeFileSync(filePath, JSON.stringify(block, null, '\t'));
     console.log(`Raw block dumped to ${filePath}`);
 }
 
