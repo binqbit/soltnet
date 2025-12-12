@@ -1,0 +1,16 @@
+version: "3"
+
+services:
+  testnet:
+    container_name: testnet
+    build:
+      context: ./
+      dockerfile: Dockerfile.testnet
+    ports:
+      - "8900:8900"
+      - "8899:8899"
+    volumes:
+      - ./test-ledger:/testnet/test-ledger
+
+volumes:
+  test-ledger:

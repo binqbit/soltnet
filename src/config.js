@@ -7,9 +7,18 @@ const CONFIG_DOCKERFILE = "Dockerfile.testnet";
 const CONFIG_DOCKERCOMPOSE = "docker-compose.yml";
 
 const REPO_ROOT = path.resolve(__dirname, "..");
+const TEMPLATE_PATH = path.join(REPO_ROOT, "config");
 const CONTAINER_PATH = path.join(REPO_ROOT, "solana-testnet");
 const ACCOUNTS_PATH = path.join(CONTAINER_PATH, "accounts");
 const TEST_LEDGER_PATH = path.join(CONTAINER_PATH, "test-ledger");
+
+function loadTemplate(name) {
+    return fs.readFileSync(path.join(TEMPLATE_PATH, name), "utf8");
+}
+
+function renderTemplate(template, values = {}) {
+    return template.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key] ?? "");
+}
 
 function stopTestnetContainer(onEnd) {
     console.log('Stopping testnet container...');
@@ -30,7 +39,7 @@ function stopTestnetContainer(onEnd) {
 function startTestnetContainer(onEnd) {
     console.log('Starting testnet container...');
     const composePath = path.resolve(CONTAINER_PATH, CONFIG_DOCKERCOMPOSE);
-    const child = spawn('docker', ['compose', '-f', composePath, 'up', '--build'], {
+    const child = spawn('docker', ['compose', '-f', composePath, 'up', '-d', '--build'], {
         stdio: 'inherit',
     });
     child.on('close', (code) => {
@@ -73,54 +82,19 @@ function setTestnetConfig(accounts_path) {
         fs.copyFileSync(path.join(accounts_path, `${account}.json`), path.join(ACCOUNTS_PATH, `${account}.json`));
     }
 
-    let program_flags = programs.map(addr => `--bpf-program ${addr} ./accounts/${addr}.so`).join(' \\\n\t');
-    let account_flags = accounts.map(addr => `--account ${addr} ./accounts/${addr}.json`).join(' \\\n\t');
+    const program_flags = programs.map(addr => `\\\n\t--bpf-program ${addr} ./accounts/${addr}.so `);
+    const account_flags = accounts.map(addr => `\\\n\t--account ${addr} ./accounts/${addr}.json `);
+    const all_flags = [...program_flags, ...account_flags];
 
-    writeTestnetConfig(CONFIG_DEPLOY, `
-#!/bin/sh
-solana-test-validator \\
-    --ledger /testnet/test-ledger \\
-    --reset \\
-    --log \\
-    ${program_flags} \\
-    ${account_flags}
-`);
+    const deployTemplate = loadTemplate("deploy.sh.template");
+    const flagsRendered = all_flags.join('');
+    writeTestnetConfig(CONFIG_DEPLOY, renderTemplate(deployTemplate, { FLAGS: flagsRendered }));
 
-    writeTestnetConfig(CONFIG_DOCKERFILE, `
-FROM rustlang/rust:nightly-slim AS builder
+    const dockerfileTemplate = loadTemplate("Dockerfile.testnet.template");
+    writeTestnetConfig(CONFIG_DOCKERFILE, dockerfileTemplate);
 
-WORKDIR /home/rust/solana/
-RUN apt-get update && apt-get install -y libssl-dev pkg-config wget bzip2
-RUN wget https://github.com/solana-labs/solana/releases/download/v1.18.15/solana-release-x86_64-unknown-linux-gnu.tar.bz2
-RUN tar jxf solana-release-x86_64-unknown-linux-gnu.tar.bz2
-ENV PATH=/home/rust/solana/solana-release/bin:$PATH
-
-WORKDIR /testnet
-COPY ./accounts ./accounts
-COPY ./deploy.sh ./deploy.sh
-RUN chmod +x ./deploy.sh
-
-CMD [ "sh", "./deploy.sh" ]
-`);
-
-    writeTestnetConfig(CONFIG_DOCKERCOMPOSE, `
-version: "3"
-
-services:
-  testnet:
-    container_name: testnet
-    build:
-      context: ./
-      dockerfile: Dockerfile.testnet
-    ports:
-      - "8900:8900"
-      - "8899:8899"
-    volumes:
-      - ./test-ledger:/testnet/test-ledger
-
-volumes:
-  test-ledger:
-`);
+    const composeTemplate = loadTemplate("docker-compose.yml.template");
+    writeTestnetConfig(CONFIG_DOCKERCOMPOSE, composeTemplate);
 }
 
 module.exports = {
