@@ -33,13 +33,13 @@ async function dumpAccount(address, toPath) {
 
 async function dumpAccountsFromTx(signature, toPath) {
     const connection = createConnection('http://api.mainnet-beta.solana.com');
-    const tx = await connection.getTransaction(signature, { commitment: 'confirmed' });
+    const tx = await connection.getTransaction(signature, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 });
     if (!tx) {
         throw new Error(`Transaction not found: ${signature}`);
     }
 
     const accounts = new Set();
-    tx.transaction.message.accountKeys.forEach(account => {
+    (tx.transaction.message.accountKeys || tx.transaction.message.staticAccountKeys).forEach(account => {
         accounts.add(account.toBase58());
     });
 
@@ -110,7 +110,7 @@ async function dumpRawBlock(slot, toPath = '.') {
 
 async function createJsonFromTx(signature, toPath) {
     const connection = createConnection('http://api.mainnet-beta.solana.com');
-    const tx = await connection.getParsedTransaction(signature, { commitment: 'confirmed' });
+    const tx = await connection.getParsedTransaction(signature, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 });
     if (!tx) {
         throw new Error(`Transaction not found: ${signature}`);
     }
