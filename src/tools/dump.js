@@ -7,6 +7,8 @@ const { loadTxFromJson } = require("../tx-format/json-tx.js");
 
 const UPGRADEABLE_LOADER_ID = "BPFLoaderUpgradeab1e11111111111111111111111";
 const ELF_MAGIC = Buffer.from([0x7f, 0x45, 0x4c, 0x46]);
+const MAX_U64_STR = "18446744073709551615";
+const MAX_U64 = BigInt(MAX_U64_STR);
 
 function toBuffer(data) {
     if (!data) return Buffer.alloc(0);
@@ -41,10 +43,40 @@ function serializeAccountInfo(pubkey, accountInfo) {
             data: [toBuffer(accountInfo.data).toString('base64'), 'base64'],
             owner: accountInfo.owner.toBase58(),
             executable: accountInfo.executable,
-            rentEpoch: accountInfo.rentEpoch,
+            rentEpoch: normalizeU64String(accountInfo.rentEpoch),
             space: toBuffer(accountInfo.data).length,
         },
     };
+}
+
+function normalizeU64String(value) {
+    if (typeof value === 'bigint') {
+        if (value < 0n) return "0";
+        return value > MAX_U64 ? MAX_U64_STR : value.toString();
+    }
+    if (typeof value === 'number') {
+        if (!Number.isFinite(value) || value < 0) return "0";
+        if (value > Number.MAX_SAFE_INTEGER) {
+            return MAX_U64_STR;
+        }
+        return Math.floor(value).toString();
+    }
+    if (typeof value === 'string') {
+        if (!/^\d+$/.test(value)) return "0";
+        try {
+            const big = BigInt(value);
+            if (big < 0n) return "0";
+            return big > MAX_U64 ? MAX_U64_STR : value;
+        } catch (_) {
+            return "0";
+        }
+    }
+    return "0";
+}
+
+function stringifyAccountPayload(payload) {
+    const json = JSON.stringify(payload, null, '\t');
+    return json.replace(/"rentEpoch":\s*"(\d+)"/g, '"rentEpoch": $1');
 }
 
 function normalizeAccountKey(account) {
@@ -106,7 +138,7 @@ async function dumpAccount(address, toPath) {
         console.log(`Dumping account ${address}...`);
         const outPath = path.join(toPath, `${address}.json`);
         const payload = serializeAccountInfo(pubkey, accountInfo);
-        fs.writeFileSync(outPath, JSON.stringify(payload, null, '\t'));
+        fs.writeFileSync(outPath, stringifyAccountPayload(payload));
         console.log(`Account dumped to ${outPath}`);
     }
 }
