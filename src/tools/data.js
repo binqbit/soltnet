@@ -49,6 +49,29 @@ function serializeAccountInfo(pubkey, accountInfo) {
     };
 }
 
+function normalizeAccountKey(account) {
+    if (!account) return null;
+    if (typeof account === 'string') return account;
+    if (account.pubkey) {
+        if (typeof account.pubkey === 'string') return account.pubkey;
+        if (typeof account.pubkey.toBase58 === 'function') return account.pubkey.toBase58();
+        if (typeof account.pubkey.toString === 'function') return account.pubkey.toString();
+    }
+    if (typeof account.toBase58 === 'function') return account.toBase58();
+    if (typeof account.toString === 'function') return account.toString();
+    return null;
+}
+
+function addAccountsFromList(targetSet, accounts) {
+    if (!Array.isArray(accounts)) return;
+    accounts.forEach((account) => {
+        const key = normalizeAccountKey(account);
+        if (key) {
+            targetSet.add(key);
+        }
+    });
+}
+
 async function dumpAccount(address, toPath) {
     if (!fs.existsSync(toPath)) {
         fs.mkdirSync(toPath, { recursive: true });
@@ -98,9 +121,11 @@ async function dumpAccountsFromTx(signature, toPath) {
     }
 
     const accounts = new Set();
-    (tx.transaction.message.accountKeys || tx.transaction.message.staticAccountKeys).forEach(account => {
-        accounts.add(account.toBase58());
-    });
+    const message = tx.transaction?.message;
+    addAccountsFromList(accounts, message?.accountKeys);
+    addAccountsFromList(accounts, message?.staticAccountKeys);
+    addAccountsFromList(accounts, tx.meta?.loadedAddresses?.writable);
+    addAccountsFromList(accounts, tx.meta?.loadedAddresses?.readonly);
 
     for (const account of accounts) {
         try {
