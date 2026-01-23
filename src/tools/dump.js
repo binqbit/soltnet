@@ -157,6 +157,15 @@ async function dumpAccountsFromTx(signature, toPath) {
     addAccountsFromList(accounts, tx.meta?.loadedAddresses?.writable);
     addAccountsFromList(accounts, tx.meta?.loadedAddresses?.readonly);
 
+    const tokenBalances = [
+        ...(tx.meta?.preTokenBalances ?? []),
+        ...(tx.meta?.postTokenBalances ?? []),
+    ];
+    const tokenMints = tokenBalances.map((balance) => balance?.mint).filter(Boolean);
+    const tokenOwners = tokenBalances.map((balance) => balance?.owner).filter(Boolean);
+    addAccountsFromList(accounts, tokenMints);
+    addAccountsFromList(accounts, tokenOwners);
+
     for (const account of accounts) {
         try {
             await dumpAccount(account, toPath);
