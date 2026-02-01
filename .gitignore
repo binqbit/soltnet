@@ -1,8 +1,3 @@
-/node_modules
+/target
 /solana-testnet
-/test-ledger
-/.yarn
-package-lock.json
-yarn.lock
-soltnet
-soltnet.exe
+Cargo.lock
